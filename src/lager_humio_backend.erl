@@ -31,22 +31,21 @@
 %%% this is only exported for the spawn call
 -export([deferred_log/4]).
 
--define(DEFAULT_FORMAT, "[$level] $message").
--define(BASE_API_URI,   "https://go.humio.com/api/v1/dataspaces").
--define(LOG_LEVELS, [ debug
-                    , info
-                    , notice
-                    , warning
-                    , error
-                    , critical
-                    , alert
-                    , emergency
-                    , none
-                    ]).
+-define(BASE_API_URI, "https://go.humio.com/api/v1/dataspaces").
+-define(LOG_LEVELS,   [ debug
+                      , info
+                      , notice
+                      , warning
+                      , error
+                      , critical
+                      , alert
+                      , emergency
+                      , none
+                      ]).
 
 -record(state, { token           :: string()
                , dataspace       :: string()
-               , level           :: {'mask', integer()}
+               , level           :: integer()
                , retry_interval  :: integer()
                , max_retries     :: integer()
                , httpc_opts      :: []
@@ -74,11 +73,11 @@ handle_call({set_dataspace, DS}, State) ->
 handle_call(get_loglevel, #state{level = Level} = State) ->
     {ok, Level, State};
 handle_call({set_loglevel, Level}, State) ->
-    case validate_loglevel(Level) of
+    case is_valid_log_level(Level) of
         false ->
             {ok, {error, bad_loglevel}, State};
-        NewLevel ->
-            {ok, ok, State#state{level = NewLevel}}
+        true ->
+            {ok, ok, State#state{level = Level}}
     end;
 handle_call(_Request, State) ->
     {ok, ok, State}.
@@ -88,7 +87,7 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message)),
-            Request = create_httpc_request(State, Payload),
+            Request = create_httpc_request(Payload, State),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
@@ -129,6 +128,7 @@ create_payload(Message) ->
       }
     ].
 
+%%TODO: maybe get PID from metadata
 create_tags(Level, MD) ->
     #{ <<"host">>   => to_binary(get_hostname())
      , <<"level">>  => Level
@@ -147,15 +147,16 @@ create_attributes(MD) ->
                 end, #{}, MD).
 
 create_raw_message(Level, Msg, Ts) ->
-    binary_join([Ts, <<"[", (Level)/binary, "]">>, Msg], << >>).
+    binary_join([Ts, <<"[", (Level)/binary, "]">>, Msg], <<" ">>).
 
+%%TODO: convert to ISO
 format_ts(Ts) ->
     <<(Ts)/binary, "+00:00">>.
 
 deferred_log(_Request, 0, _, _Opts) ->
     ok;
 deferred_log(Request, Retries, Interval, Opts) ->
-    case httpc:request(post, Request, [], Opts) of
+    case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} -> ok;
         _ ->
             timer:sleep(Interval * 1000),
@@ -175,14 +176,8 @@ get_hostname() ->
     {ok, Hostname} = inets:get_hostname(),
     Hostname.
 
-validate_loglevel(Level) ->
-    try lager_util:config_to_mask(Level) of
-        Levels ->
-            Levels
-    catch
-        _:_ ->
-            false
-    end.
+is_valid_log_level(Level) ->
+    lists:member(Level, ?LOG_LEVELS).
 
 validate_options([]) -> true;
 validate_options([{token, Token}|T]) when is_list(Token) ->
@@ -194,7 +189,7 @@ validate_options([{retry_interval, N} | T]) when is_integer(N) ->
 validate_options([{max_retries, N} | T]) when is_integer(N) ->
     validate_options(T);
 validate_options([{level, L} | T]) when is_atom(L) ->
-    case lists:member(L, ?LOG_LEVELS) of
+    case is_valid_log_level(L) of
         false ->
             throw({error, {fatal, {bad_level, L}}});
         true ->
@@ -215,10 +210,10 @@ binary_join([], _Sep) ->
   <<>>;
 binary_join([Part], _Sep) ->
   Part;
-binary_join([Head | Tail], Sep) ->
+binary_join([H | T], Sep) ->
   lists:foldl(fun (Value, Acc) ->
                       <<Acc/binary, Sep/binary, Value/binary>>
-              end, Head, Tail).
+              end, H, T).
 
 to_binary(Value) when is_list(Value) ->
     list_to_binary(Value);
