@@ -8,3 +8,7 @@ ebin/*.beam
 rel/example_project
 .concrete/DEV_MODE
 .rebar
+logs
+_build
+.idea
+rebar3.crashdump
