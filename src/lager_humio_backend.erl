@@ -7,9 +7,15 @@
 %%%    <li>`token' - Humio Ingestion API token (from Settings)</li>
 %%%    <li>`dataspce' - Humio dataspace (from Settings)</li>
 %%%    <li>`level' - log level to use</li>
+%%%    <li>`formatter' - the module to use when formatting log messages.
+%%%                      Defaults to `lager_default_formatter'</li>
+%%%    <li>`formatter_config' - the format configuration string. Defaults to
+%%%                             `time [ severity ] message'</li>
 %%%    <li>`retry_interval' - intervarl for retry in case endpoint is not
-%%%                           availabes</li>
-%%%    <li>`max_retries' - maximum number of retries</li>
+%%%                           available (defaults to 60 seconds)</li>
+%%%    <li>`max_retries' - maximum number of retries (defaults to 10 retries)</li>
+%%%    <li>`httpc_opts' - set custom `httpc:http_options()` to change default
+%%%                       HTTP client behaviour</li>
 %%% </ul>
 %%% @end
 %%% Created : 25 Feb 2017 by Martin Wiso <martin@wiso.cx>
