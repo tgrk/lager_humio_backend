@@ -20,7 +20,7 @@ $ rebar get-deps compile
 TODO
 ```
 
-## Configuartion
+## Configuaration
 
 | Option           | Required | Description                                    |
 | ---------------- |:--------:| ---------------------------------------------- |
@@ -28,22 +28,19 @@ TODO
 | dataspce         | Yes      | Humio dataspace (from [Settings][2])           |
 | level            | Yes      | Minimal log level to use (defaults to `debug`) |
 | formatter        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter') |
-| formatter_config | No       | The format configuration string (defaults to `time [ severity ] message') |
+| formatter_config | No       | The format configuration string (defaults to `time [ severity ] message`) |
 | retry_interval   | No       | Intervarl for retry in case endpoint is not available (defaults to 60 seconds) |
 | max_retries      | No       | Maximum number of retries (defaults to 10 retries) |
 | httpc_opts       | No       | Set custom `httpc:http_options()` to change default HTTP client behaviour |
 
-Example:
+Sample configuration:
 ```erlang
 {lager, [
   {handlers, [
     {lager_console_backend, debug},
     {lager_humio_backend,   [{token, "YOUR_INGESTION_API_TOKEN"},
                              {dataspace, "YOUR_DATASPACE"},
-                             {level, debug},
-                             {retry_interval, 60}, % optional
-                             {max_retries,  10},   % optional
-                             {httpc_opts,  []}     % optional
+                             {level, info}
     ]}
   ]}
 }
