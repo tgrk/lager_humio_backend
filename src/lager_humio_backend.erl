@@ -114,7 +114,7 @@ code_change(_OldVsn, State, _Extra) ->
 create_payload(Message, State) ->
     MD    = lager_msg:metadata(Message),
     Level = to_binary(lager_msg:severity(Message)),
-    Ts    = to_binary(lager_msg:timestamp(Message)),
+    Ts    = format_timestamp(lager_msg:timestamp(Message)),
     Raw   = to_binary(create_raw_message(Message, State)),
     [
      #{<<"tags">>    => create_tags(Level, MD)
@@ -130,7 +130,7 @@ create_tags(Level, MD) ->
      }.
 
 create_event(Ts, MD, RawMessage) ->
-    #{ <<"timestamp">>  => format_ts(Ts)
+    #{ <<"timestamp">>  => Ts
      , <<"attributes">> => create_attributes(MD)
      , <<"rawstring">>  => RawMessage
      }.
@@ -143,9 +143,8 @@ create_attributes(MD) ->
 create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) ->
     Formatter:format(Msg, Config).
 
-%%TODO: convert to ISO
-format_ts(Ts) ->
-    <<(Ts)/binary, "+00:00">>.
+format_timestamp(Ts) ->
+    iso8601:format(Ts).
 
 deferred_log(_Request, 0, _, _Opts) ->
     ok;

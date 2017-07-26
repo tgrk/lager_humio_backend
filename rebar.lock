@@ -1,6 +1,7 @@
 {"1.1.0",
 [{<<"eunit_formatters">>,{pkg,<<"eunit_formatters">>,<<"0.3.1">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
+ {<<"iso8601">>,{pkg,<<"inaka_iso8601">>,<<"1.1.2">>},0},
  {<<"jiffy">>,{pkg,<<"jiffy">>,<<"0.14.7">>},0},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.4">>},0},
  {<<"meck">>,{pkg,<<"meck">>,<<"0.8.4">>},0}]}.
@@ -8,6 +9,7 @@
 {pkg_hash,[
  {<<"eunit_formatters">>, <<"7A6FC351EB5B873E2356B8852EB751E20C13A72FBCA03393CF682B8483509573">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
+ {<<"iso8601">>, <<"6D84BBA9641FA39802E6B53C57E0B61B2F61BF8E81C112356B57BE8DA31DE771">>},
  {<<"jiffy">>, <<"9F33B893EDD6041CEAE03BC1E50B412E858CC80B46F3D7535A7A9940A79A1C37">>},
  {<<"lager">>, <<"A6DEB74DAE7927F46BD13255268308EF03EB206EC784A94EAF7C1C0F3B811615">>},
  {<<"meck">>, <<"59CA1CD971372AA223138EFCF9B29475BDE299E1953046A0C727184790AB1520">>}]}
