@@ -167,7 +167,7 @@ get_headers(Token) ->
     [{"Authorization", "Bearer " ++ Token}].
 
 get_hostname() ->
-    {ok, Hostname} = inets:get_hostname(),
+    {ok, Hostname} = inet:gethostname(),
     Hostname.
 
 is_valid_log_level(Level) ->
