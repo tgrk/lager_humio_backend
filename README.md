@@ -1,5 +1,5 @@
 # lager_humio_backend
-Lager backend for Humio log management system
+Erlang Lager backend for [Humio][1] log management system
 
 ## Requirements
 
@@ -15,10 +15,8 @@ or
 $ rebar get-deps compile
 ```
 
-## Setups
-```
-TODO
-```
+## Setup
+First you have to sign up with [Humio][1] service to get all required information for [setting][2] up logging backend.
 
 ## Configuaration
 
