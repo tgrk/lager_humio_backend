@@ -19,6 +19,8 @@
 
 -behaviour(gen_event).
 
+-include_lib("lager/include/lager.hrl").
+
 %% API
 -export([ init/1
         , handle_call/2
@@ -32,20 +34,12 @@
 -export([deferred_log/4]).
 
 -define(BASE_API_URI, "https://go.humio.com/api/v1/dataspaces").
--define(LOG_LEVELS,   [ debug
-                      , info
-                      , notice
-                      , warning
-                      , error
-                      , critical
-                      , alert
-                      , emergency
-                      , none
-                      ]).
 
 -record(state, { token           :: string()
                , dataspace       :: string()
                , level           :: integer()
+               , formatter       :: atom()
+               , format_config   :: list()
                , retry_interval  :: integer()
                , max_retries     :: integer()
                , httpc_opts      :: []
@@ -54,24 +48,19 @@
 %% @private
 init(Options) ->
     true = validate_options(Options),
-    State = #state{ token           = get_option(token, Options, "")
-                  , dataspace       = get_option(dataspace, Options, "")
-                  , level           = lager_util:level_to_num(
-                                        get_option(level, Options, debug))
-                  , retry_interval  = get_option(retry_interval, Options, 60)
-                  , max_retries     = get_option(max_retries, Options, 10)
-                  , httpc_opts      = get_option(httpc_opts, Options, [])
-                  },
-    io:format("DEBUG: state=~p", [State]),
-    {ok, State}.
+    {ok, get_configuration(Options)}.
 
 %% @private
 handle_call({set_token, Token}, State) ->
     {ok, ok, State#state{token = Token}};
 handle_call({set_dataspace, DS}, State) ->
     {ok, ok, State#state{dataspace = DS}};
+handle_call({set_httpc_opts, Opts}, State) ->
+    {ok, ok, State#state{httpc_opts = Opts}};
 handle_call(get_loglevel, #state{level = Level} = State) ->
     {ok, Level, State};
+handle_call(get_httpc_opts, #state{httpc_opts = Opts} = State) ->
+    {ok, Opts, State};
 handle_call({set_loglevel, Level}, State) ->
     case is_valid_log_level(Level) of
         false ->
@@ -86,7 +75,7 @@ handle_call(_Request, State) ->
 handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
-            Payload = jiffy:encode(create_payload(Message)),
+            Payload = jiffy:encode(create_payload(Message, State)),
             Request = create_httpc_request(Payload, State),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
@@ -116,12 +105,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%%============================================================================
 %%% Internal functionality
 %%%============================================================================
-create_payload(Message) ->
+create_payload(Message, State) ->
     MD    = lager_msg:metadata(Message),
     Level = to_binary(lager_msg:severity(Message)),
-    Msg   = to_binary(lager_msg:message(Message)),
     Ts    = to_binary(lager_msg:timestamp(Message)),
-    Raw   = to_binary(create_raw_message(Level, Msg, Ts)),
+    Raw   = to_binary(create_raw_message(Message, State)),
     [
      #{<<"tags">>    => create_tags(Level, MD)
       , <<"events">> => [create_event(Ts, MD, Raw)]
@@ -146,8 +134,8 @@ create_attributes(MD) ->
                         maps:put(to_binary(K), to_binary(V), Acc)
                 end, #{}, MD).
 
-create_raw_message(Level, Msg, Ts) ->
-    binary_join([Ts, <<"[", (Level)/binary, "]">>, Msg], <<" ">>).
+create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) ->
+    Formatter:format(Msg, Config).
 
 %%TODO: convert to ISO
 format_ts(Ts) ->
@@ -177,7 +165,7 @@ get_hostname() ->
     Hostname.
 
 is_valid_log_level(Level) ->
-    lists:member(Level, ?LOG_LEVELS).
+    lists:member(Level, ?LEVELS).
 
 validate_options([]) -> true;
 validate_options([{token, Token}|T]) when is_list(Token) ->
@@ -198,6 +186,18 @@ validate_options([{level, L} | T]) when is_atom(L) ->
 validate_options([H | _]) ->
     throw({error, {fatal, {bad_console_config, H}}}).
 
+get_configuration(Options) ->
+    #state{ token           = get_option(token, Options, "")
+          , dataspace       = get_option(dataspace, Options, "")
+          , level           = lager_util:level_to_num(
+                                get_option(level, Options, debug))
+          , formatter       = get_option(formatter, Options, lager_default_formatter)
+          , format_config   = get_option(format_config, Options, [])
+          , retry_interval  = get_option(retry_interval, Options, 60)
+          , max_retries     = get_option(max_retries, Options, 10)
+          , httpc_opts      = get_option(httpc_opts, Options, [])
+          }.
+
 get_option(Key, Options, Default) ->
     case lists:keyfind(Key, 1, Options) of
         {Key, Value} ->
@@ -205,15 +205,6 @@ get_option(Key, Options, Default) ->
         false ->
             Default
     end.
-
-binary_join([], _Sep) ->
-  <<>>;
-binary_join([Part], _Sep) ->
-  Part;
-binary_join([H | T], Sep) ->
-  lists:foldl(fun (Value, Acc) ->
-                      <<Acc/binary, Sep/binary, Value/binary>>
-              end, H, T).
 
 to_binary(Value) when is_list(Value) ->
     list_to_binary(Value);
