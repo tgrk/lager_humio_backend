@@ -155,7 +155,8 @@ call_injest_api(Request, Retries, Interval, Opts) ->
     io:format("LHB: defer_log.args=~p~n", [{Request, Retries, Interval, Opts}]),
     case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} -> ok;
-        _ ->
+        Other ->
+            io:format("LHB: defer_log.other=~p~n", [Other]),
             timer:sleep(Interval * 1000),
             call_injest_api(Request, Retries - 1, Interval, Opts)
     end.
