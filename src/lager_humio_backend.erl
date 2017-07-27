@@ -36,9 +36,6 @@
         , code_change/3
         ]).
 
-%%% this is only exported for the spawn call
--export([deferred_log/4]).
-
 -define(BASE_API_URI, "https://go.humio.com/api/v1/dataspaces").
 
 -record(state, { token           :: string()
@@ -54,7 +51,9 @@
 %% @private
 init(Options) ->
     true = validate_options(Options),
-    {ok, get_configuration(Options)}.
+    State = get_configuration(Options),
+    io:format("LHB: state=~p~n", [State]),
+    {ok, State}.
 
 %% @private
 handle_call({set_token, Token}, State) ->
@@ -82,13 +81,16 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message, State)),
+            io:format("LHB: payload=~p~n", [Payload]),
             Request = create_httpc_request(Payload, State),
+            io:format("LHB: request=~p~n", [Request]),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
 
-            Args = [Request, MaxRetries, RetryInterval, Opts],
-            spawn(?MODULE, deferred_log, Args),
+            spawn(fun () ->
+                          call_injest_api(Request, MaxRetries, RetryInterval, Opts)
+                  end),
             {ok, State};
         false ->
             {ok, State}
@@ -116,6 +118,7 @@ create_payload(Message, State) ->
     Level = to_binary(lager_msg:severity(Message)),
     Ts    = format_timestamp(lager_msg:timestamp(Message)),
     Raw   = to_binary(create_raw_message(Message, State)),
+    io:format("LHB: create_payload=~p~n", [{MD, Level, Ts, Raw}]),
     [
      #{<<"tags">>    => create_tags(Level, MD)
       , <<"events">> => [create_event(Ts, MD, Raw)]
@@ -146,14 +149,15 @@ create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) -
 format_timestamp(Ts) ->
     iso8601:format(Ts).
 
-deferred_log(_Request, 0, _, _Opts) ->
+call_injest_api(_Request, 0, _, _Opts) ->
     ok;
-deferred_log(Request, Retries, Interval, Opts) ->
+call_injest_api(Request, Retries, Interval, Opts) ->
+    io:format("LHB: defer_log.args=~p~n", [{Request, Retries, Interval, Opts}]),
     case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} -> ok;
         _ ->
             timer:sleep(Interval * 1000),
-            deferred_log(Request, Retries - 1, Interval, Opts)
+            call_injest_api(Request, Retries - 1, Interval, Opts)
     end.
 
 create_httpc_request(Payload, #state{token = Token, dataspace = DS}) ->
