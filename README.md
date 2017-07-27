@@ -23,6 +23,7 @@ First you have to sign up with [Humio][1] service to get all required informatio
 | level            | Yes      | Minimal log level to use (defaults to `debug`) |
 | formatter        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter') |
 | formatter_config | No       | The format configuration string (defaults to `time [ severity ] message`) |
+| metadata_filter  | No       | A list of excluded metadata keys |
 | retry_interval   | No       | Intervarl for retry in case endpoint is not available (defaults to 60 seconds) |
 | max_retries      | No       | Maximum number of retries (defaults to 10 retries) |
 | httpc_opts       | No       | Set custom `httpc:http_options()` to change default HTTP client behaviour |

@@ -13,6 +13,7 @@
 %%%                             `time [ severity ] message'</li>
 %%%    <li>`retry_interval' - intervarl for retry in case endpoint is not
 %%%                           available (defaults to 60 seconds)</li>
+%%%    <li>`metadata_filter' - a list of excluded metadata keys</li>
 %%%    <li>`max_retries' - maximum number of retries (defaults to 10 retries)</li>
 %%%    <li>`httpc_opts' - set custom `httpc:http_options()` to change default
 %%%                       HTTP client behaviour</li>
@@ -24,8 +25,6 @@
 -module(lager_humio_backend).
 
 -behaviour(gen_event).
-
--include_lib("lager/include/lager.hrl").
 
 %% API
 -export([ init/1
@@ -43,10 +42,18 @@
                , level           :: integer()
                , formatter       :: atom()
                , format_config   :: list()
+               , metadata_filter :: list()
                , retry_interval  :: integer()
                , max_retries     :: integer()
                , httpc_opts      :: []
                }).
+
+-include_lib("lager/include/lager.hrl").
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 
 %% @private
 init(Options) ->
@@ -110,14 +117,14 @@ code_change(_OldVsn, State, _Extra) ->
 %%%============================================================================
 %%% Internal functionality
 %%%============================================================================
-create_payload(Message, State) ->
+create_payload(Message, #state{metadata_filter = MDFilter} = State) ->
     MD    = lager_msg:metadata(Message),
     Level = to_binary(lager_msg:severity(Message)),
-    Ts    = format_timestamp(lager_msg:timestamp(Message)),
+    Ts    = lager_msg:timestamp(Message),
     Raw   = to_binary(create_raw_message(Message, State)),
     [
      #{<<"tags">>    => create_tags(Level, MD)
-      , <<"events">> => [create_event(Ts, MD, Raw)]
+      , <<"events">> => [create_event(Ts, MD, MDFilter, Raw)]
       }
     ].
 
@@ -127,16 +134,20 @@ create_tags(Level, MD) ->
      , <<"source">> => to_binary(get_option(pid, MD, <<"unknown">>))
      }.
 
-create_event(Ts, MD, RawMessage) ->
-    #{ <<"timestamp">>  => Ts
-     , <<"attributes">> => create_attributes(MD)
+create_event(Ts, MD, MDFilter, RawMessage) ->
+    #{ <<"timestamp">>  => format_timestamp(Ts)
+     , <<"attributes">> => create_attributes(MD, MDFilter)
      , <<"rawstring">>  => RawMessage
      }.
 
-create_attributes(MD) ->
-    lists:foldl(fun({K, V}, Acc) ->
-                        maps:put(to_binary(K), to_binary(V), Acc)
-                end, #{}, MD).
+create_attributes(MD, Excluded) ->
+    maps:without(Excluded, convert_attributes(MD, #{})).
+
+convert_attributes([], Acc) ->
+    Acc;
+convert_attributes([{K, V} | T], Acc) ->
+    Acc1 = maps:put(K, to_binary(V), Acc),
+    convert_attributes(T, Acc1).
 
 create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) ->
     Formatter:format(Msg, Config).
@@ -171,8 +182,12 @@ is_valid_log_level(Level) ->
     lists:member(Level, ?LEVELS).
 
 validate_options([]) -> true;
-validate_options([{token, Token}|T]) when is_list(Token) ->
+validate_options([{token, ""} | _T]) ->
+    throw({error, {fatal, missing_token}});
+validate_options([{token, Token} | T]) when is_list(Token) ->
     validate_options(T);
+validate_options([{dataspace, ""} | _T]) ->
+    throw({error, {fatal, missing_dataspace}});
 validate_options([{dataspace, DT} | T]) when is_list(DT) ->
     validate_options(T);
 validate_options([{retry_interval, N} | T]) when is_integer(N) ->
@@ -196,6 +211,7 @@ get_configuration(Options) ->
                                 get_option(level, Options, debug))
           , formatter       = get_option(formatter, Options, lager_default_formatter)
           , format_config   = get_option(format_config, Options, [])
+          , metadata_filter = get_option(metadata_filter, Options, [])
           , retry_interval  = get_option(retry_interval, Options, 60)
           , max_retries     = get_option(max_retries, Options, 10)
           , httpc_opts      = get_option(httpc_opts, Options, [])
@@ -217,3 +233,70 @@ to_binary(Value) when is_atom(Value) ->
     atom_to_binary(Value, latin1);
 to_binary(Value) ->
     Value.
+
+%%%----------------------------------------------------------------------------
+%%% Tests
+%%%----------------------------------------------------------------------------
+-ifdef(TEST).
+
+get_configuration_test() ->
+    Options = [ {token, ""}
+              , {dataspace, ""}
+              , {level, debug}
+              , {formatter, lager_default_formatter}
+              , {format_config, []}
+              , {metadata_filter, []}
+              , {retry_interval, 60}
+              , {max_retries, 10}
+              , {httpc_opts, []}
+              ],
+
+    ?assertEqual(
+       {state, [], [], 128, lager_default_formatter, [], [], 60, 10, []},
+       get_configuration(Options)
+      ).
+
+create_tags_test() ->
+    MD = [{pid, "<0.3774.0>"},
+          {line, 119},
+          {file, "lager_handler_watcher.erl"},
+          {module, lager_handler_watcher}
+         ],
+
+    ?assertEqual(
+       #{<<"host">> => <<"carbon">>,
+         <<"level">> => info,
+         <<"source">> => <<"<0.3774.0>">>
+        },
+       create_tags(info, MD)
+      ).
+
+create_event_test() ->
+    MD = [{pid, "<0.3774.0>"},
+          {line, 119},
+          {file, "lager_handler_watcher.erl"},
+          {module, lager_handler_watcher}
+         ],
+    MDFilter = [line, file],
+    Ts = {1501,189140,422258},
+
+    ?assertEqual(
+       #{<<"attributes">> =>
+             #{module => <<"lager_handler_watcher">>,
+               pid => <<"<0.3774.0>">>
+              },
+         <<"rawstring">> => <<"raw">>,
+         <<"timestamp">> => <<"2017-07-27T20:59:00Z">>},
+       create_event(Ts, MD, MDFilter, <<"raw">>)
+      ).
+
+httpc_test() ->
+    ?assertEqual(
+       {"https://go.humio.com/api/v1/dataspaces/bar/ingest",
+        [{"Authorization","Bearer foo"}],
+        "application/json",
+        <<"{}">>},
+       create_httpc_request(<<"{}">>, #state{token = "foo", dataspace = "bar"})
+      ).
+
+-endif.
