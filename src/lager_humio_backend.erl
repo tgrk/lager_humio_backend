@@ -129,7 +129,7 @@ create_payload(Message, State) ->
 create_tags(Level, MD) ->
     #{ <<"host">>   => to_binary(get_hostname())
      , <<"level">>  => Level
-     , <<"source">> => <<>>
+     , <<"source">> => get_option(pid, MD, <<"unknown">>)
      }.
 
 create_event(Ts, MD, RawMessage) ->
