@@ -1,0 +1,11 @@
+language: erlang
+notifications:
+  email: martin@wiso.cz
+otp_release:
+  - 18.2.1
+script: bin/rebar3 eunit
+before_install:
+    pip install --user codecov
+after_success:
+  - bin/covertool -cover _build/test/cover/eunit.coverdata -appname lager_humio_backend -output cobertura.xml
+  - codecov

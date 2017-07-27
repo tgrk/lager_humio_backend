@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/tgrk/lager_humio_backend.svg?branch=master)](https://travis-ci.org/tgrk/lager_humio_backend)
+[![codecov.io](https://codecov.io/github/tgrk/lager_humio_backend/coverage.svg?branch=master)](https://codecov.io/github/tgrk/lager_humio_backend?branch=master)
+
 # lager_humio_backend
 Erlang Lager backend for [Humio][1] log management system
 
