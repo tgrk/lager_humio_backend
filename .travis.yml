@@ -2,8 +2,8 @@ language: erlang
 notifications:
   email: martin@wiso.cz
 otp_release:
-  - 18.2.1
-script: bin/rebar3 eunit
+  - 19.3
+script: bin/rebar get-deps compile eunit
 before_install:
     pip install --user codecov
 after_success:
