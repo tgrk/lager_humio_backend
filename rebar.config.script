@@ -1,0 +1,18 @@
+case erlang:function_exported(rebar3, main, 1) of
+    true ->
+        %% rebar3
+        CONFIG;
+    false ->
+        %% rebar 2.x or older
+        NewConf = lists:keystore(deps_dir, 1, CONFIG, {deps_dir, "deps"}),
+        Deps = [{jiffy, "0.*",
+                 {git, "https://github.com/davisp/jiffy.git", {tag, "0.14.7"}}},
+                {'iso8601', ".*", 
+                 {git, "git@github.com:kivra/erlang_iso8601.git", {tag, "1.2.1"}}},
+                {meck, ".*",
+                 {git, "https://github.com/eproxus/meck.git", {tag, "0.8.4"}}},
+                {eunit_formatters, ".*",
+                 {git, "https://github.com/seancribbs/eunit_formatters.git", {tag, "v0.3.1"}}}
+               ],
+        lists:keystore(deps, 1, NewConf, {deps, Deps})
+end.

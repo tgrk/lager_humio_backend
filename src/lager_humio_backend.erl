@@ -57,9 +57,12 @@
 
 %% @private
 init(Options) ->
-    true = validate_options(Options),
-    State = get_configuration(Options),
-    {ok, State}.
+    case validate_options(Options) of
+        ok ->
+            {ok, get_configuration(Options)};
+        {error, _Reason} = Error ->
+            Error
+    end.
 
 %% @private
 handle_call({set_token, Token}, State) ->
@@ -181,13 +184,13 @@ get_hostname() ->
 is_valid_log_level(Level) ->
     lists:member(Level, ?LEVELS).
 
-validate_options([]) -> true;
+validate_options([]) -> ok;
 validate_options([{token, ""} | _T]) ->
-    throw({error, {fatal, missing_token}});
+    {error, missing_token};
 validate_options([{token, Token} | T]) when is_list(Token) ->
     validate_options(T);
 validate_options([{dataspace, ""} | _T]) ->
-    throw({error, {fatal, missing_dataspace}});
+    {error, missing_dataspace};
 validate_options([{dataspace, DT} | T]) when is_list(DT) ->
     validate_options(T);
 validate_options([{retry_interval, N} | T]) when is_integer(N) ->
@@ -197,12 +200,20 @@ validate_options([{max_retries, N} | T]) when is_integer(N) ->
 validate_options([{level, L} | T]) when is_atom(L) ->
     case is_valid_log_level(L) of
         false ->
-            throw({error, {fatal, {bad_level, L}}});
+            {error, {bad_level, L}};
         true ->
             validate_options(T)
     end;
+validate_options([{formatter, _Val} | T]) ->
+    validate_options(T);
+validate_options([{format_config, _Val} | T]) ->
+    validate_options(T);
+validate_options([{metadata_filter, Excludes} | T]) when is_list(Excludes) ->
+    validate_options(T);
+validate_options([{httpc_opts, Opts} | T]) when is_list(Opts) ->
+    validate_options(T);
 validate_options([H | _]) ->
-    throw({error, {fatal, {bad_console_config, H}}}).
+    {error, {bad_config, H}}.
 
 get_configuration(Options) ->
     #state{ token           = get_option(token, Options, "")
@@ -255,6 +266,38 @@ get_configuration_test() ->
        {state, [], [], 128, lager_default_formatter, [], [], 60, 10, []},
        get_configuration(Options)
       ).
+
+validate_options_test() ->
+    ValidOptions = [ {token, "foo"}
+                   , {dataspace, "bar"}
+                   , {level, debug}
+                   , {formatter, lager_default_formatter}
+                   , {format_config, []}
+                   , {metadata_filter, []}
+                   , {retry_interval, 60}
+                   , {max_retries, 10}
+                   , {httpc_opts, []}
+                   ],
+
+    ?assertEqual(ok, validate_options(ValidOptions)),
+    ?assertEqual(ok, validate_options([])),
+
+    Invalid = [
+                {{token, ""},           {error, missing_token}}
+              , {{dataspace, ""},       {error, missing_dataspace}}
+              , {{level, unknown},      {error, {bad_level, unknown}}}
+              , {{retry_interval, foo}, {error, {bad_config, {retry_interval, foo}}}}
+              , {{max_retries, bar},    {error, {bad_config, {max_retries, bar}}}}
+              , {{httpc_opts, #{}},     {error, {bad_config, {httpc_opts, #{}}}}}
+              ],
+    lists:foreach(
+      fun ({Option, ExpectedError}) ->
+              ?assertEqual(
+                 ExpectedError,
+                 validate_options([Option])
+                )
+      end, Invalid),
+    ok.
 
 create_tags_test() ->
     MD = [{pid, "<0.3774.0>"},
