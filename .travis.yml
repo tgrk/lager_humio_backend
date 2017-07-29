@@ -3,7 +3,7 @@ notifications:
   email: martin@wiso.cz
 otp_release:
   - 19.3
-script: bin/rebar get-deps compile eunit
+script: rebar get-deps compile eunit
 before_install:
     pip install --user codecov
 after_success:
