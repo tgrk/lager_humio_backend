@@ -3,7 +3,9 @@ notifications:
   email: martin@wiso.cz
 otp_release:
   - 19.3
-script: bin/rebar3 eunit
+install:
+  - wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
+script: rebar3 eunit
 before_install:
     pip install --user codecov
 after_success:
