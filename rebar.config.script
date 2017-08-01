@@ -12,7 +12,7 @@ case erlang:function_exported(rebar3, main, 1) of
                 {iso8601, ".*",
                   {git, "https://github.com/erlsci/iso8601.git", {tag, "1.2.3"}}},
                 {meck, ".*",
-                 {git, "https://github.com/eproxus/meck.git", {tag, "0.8.4"}}},
+                 {git, "https://github.com/eproxus/meck.git", {tag, "0.8.7"}}},
                 {eunit_formatters, ".*",
                  {git, "https://github.com/seancribbs/eunit_formatters.git", {tag, "v0.3.1"}}}
                ],

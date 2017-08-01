@@ -50,10 +50,17 @@
 
 -include_lib("lager/include/lager.hrl").
 
+%% Exported for testing
 -ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
+-export([ call_injest_api/4
+        , create_httpc_request/3
+        , get_configuration/1
+        , validate_options/1
+        , create_event/4
+        , create_tags/2
+        , get_hostname/0
+        ]).
 -endif.
-
 
 %% @private
 init(Options) ->
@@ -90,7 +97,7 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message, State)),
-            Request = create_httpc_request(Payload, State),
+            Request = create_httpc_request(Payload, State#state.token, State#state.dataspace),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
@@ -162,13 +169,14 @@ call_injest_api(_Request, 0, _, _Opts) ->
     ok;
 call_injest_api(Request, Retries, Interval, Opts) ->
     case httpc:request(post, Request, Opts, []) of
-        {ok, {{_, 200, _}, _H, _B}} -> ok;
+        {ok, {{_, 200, _}, _H, _B}} ->
+            ok;
         _Other ->
             timer:sleep(Interval * 1000),
             call_injest_api(Request, Retries - 1, Interval, Opts)
     end.
 
-create_httpc_request(Payload, #state{token = Token, dataspace = DS}) ->
+create_httpc_request(Payload, Token, DS) ->
     {get_uri(DS), get_headers(Token), "application/json", Payload}.
 
 get_uri(DS) ->
@@ -244,102 +252,3 @@ to_binary(Value) when is_atom(Value) ->
     atom_to_binary(Value, latin1);
 to_binary(Value) ->
     Value.
-
-%%%----------------------------------------------------------------------------
-%%% Tests
-%%%----------------------------------------------------------------------------
--ifdef(TEST).
-
-get_configuration_test() ->
-    Options = [ {token, ""}
-              , {dataspace, ""}
-              , {level, debug}
-              , {formatter, lager_default_formatter}
-              , {format_config, []}
-              , {metadata_filter, []}
-              , {retry_interval, 60}
-              , {max_retries, 10}
-              , {httpc_opts, []}
-              ],
-
-    ?assertEqual(
-       {state, [], [], 128, lager_default_formatter, [], [], 60, 10, []},
-       get_configuration(Options)
-      ).
-
-validate_options_test() ->
-    ValidOptions = [ {token, "foo"}
-                   , {dataspace, "bar"}
-                   , {level, debug}
-                   , {formatter, lager_default_formatter}
-                   , {format_config, []}
-                   , {metadata_filter, []}
-                   , {retry_interval, 60}
-                   , {max_retries, 10}
-                   , {httpc_opts, []}
-                   ],
-
-    ?assertEqual(ok, validate_options(ValidOptions)),
-    ?assertEqual(ok, validate_options([])),
-
-    Invalid = [
-                {{token, ""},           {error, missing_token}}
-              , {{dataspace, ""},       {error, missing_dataspace}}
-              , {{level, unknown},      {error, {bad_level, unknown}}}
-              , {{retry_interval, foo}, {error, {bad_config, {retry_interval, foo}}}}
-              , {{max_retries, bar},    {error, {bad_config, {max_retries, bar}}}}
-              , {{httpc_opts, #{}},     {error, {bad_config, {httpc_opts, #{}}}}}
-              ],
-    lists:foreach(
-      fun ({Option, ExpectedError}) ->
-              ?assertEqual(
-                 ExpectedError,
-                 validate_options([Option])
-                )
-      end, Invalid),
-    ok.
-
-create_tags_test() ->
-    MD = [{pid, "<0.3774.0>"},
-          {line, 119},
-          {file, "lager_handler_watcher.erl"},
-          {module, lager_handler_watcher}
-         ],
-
-    ?assertEqual(
-       #{<<"host">> => <<"carbon">>,
-         <<"level">> => info,
-         <<"source">> => <<"<0.3774.0>">>
-        },
-       create_tags(info, MD)
-      ).
-
-create_event_test() ->
-    MD = [{pid, "<0.3774.0>"},
-          {line, 119},
-          {file, "lager_handler_watcher.erl"},
-          {module, lager_handler_watcher}
-         ],
-    MDFilter = [line, file],
-    Ts = {1501,189140,422258},
-
-    ?assertEqual(
-       #{<<"attributes">> =>
-             #{module => <<"lager_handler_watcher">>,
-               pid => <<"<0.3774.0>">>
-              },
-         <<"rawstring">> => <<"raw">>,
-         <<"timestamp">> => <<"2017-07-27T20:59:00Z">>},
-       create_event(Ts, MD, MDFilter, <<"raw">>)
-      ).
-
-httpc_test() ->
-    ?assertEqual(
-       {"https://go.humio.com/api/v1/dataspaces/bar/ingest",
-        [{"Authorization","Bearer foo"}],
-        "application/json",
-        <<"{}">>},
-       create_httpc_request(<<"{}">>, #state{token = "foo", dataspace = "bar"})
-      ).
-
--endif.
