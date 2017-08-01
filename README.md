@@ -13,6 +13,11 @@ Project depends on [jiffy][3] library for JSON parsing and uses default HTTP cli
 ```
 $ rebar3 update compile
 ```
+or
+
+```
+$ rebar get-deps && rebar compile
+```
 
 ## Setup
 First you have to sign up with [Humio][1] service to get all required information for [setting][2] up logging backend.
