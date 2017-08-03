@@ -59,6 +59,7 @@
         , create_event/4
         , create_tags/2
         , get_hostname/0
+        , to_binary/1
         ]).
 -endif.
 
@@ -72,16 +73,8 @@ init(Options) ->
     end.
 
 %% @private
-handle_call({set_token, Token}, State) ->
-    {ok, ok, State#state{token = Token}};
-handle_call({set_dataspace, DS}, State) ->
-    {ok, ok, State#state{dataspace = DS}};
-handle_call({set_httpc_opts, Opts}, State) ->
-    {ok, ok, State#state{httpc_opts = Opts}};
 handle_call(get_loglevel, #state{level = Level} = State) ->
     {ok, Level, State};
-handle_call(get_httpc_opts, #state{httpc_opts = Opts} = State) ->
-    {ok, Opts, State};
 handle_call({set_loglevel, Level}, State) ->
     case is_valid_log_level(Level) of
         false ->

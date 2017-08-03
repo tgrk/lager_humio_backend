@@ -9,6 +9,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-compile({parse_transform, lager_transform}).
+
 %% =============================================================================
 lager_humio_backend_test_() ->
     {setup,
@@ -19,7 +21,7 @@ lager_humio_backend_test_() ->
              unmock_httpc()
      end,
      [
-       {"Call Ingest API success",        fun test_call_ingest_api_success/0}
+       {"Integration",                    fun test_integration/0}
      , {"Call Ingest API retry",          fun test_call_ingest_api_retry/0}
      , {"Loading of init/config options", fun test_get_configuration/0}
      , {"Validate init/config options",   fun test_validate_options/0}
@@ -29,29 +31,57 @@ lager_humio_backend_test_() ->
     }.
 
 %% =============================================================================
-test_call_ingest_api_success() ->
-    Request = lager_humio_backend:create_httpc_request(<<"{}">>, "foo", "bar"),
+test_integration() ->
+    HumioConfig = {lager_humio_backend,
+                   [{token, "foo"},
+                    {dataspace, "bar"},
+                    {level, info}]
+                  },
 
-    ?assertEqual(
-       {"https://go.humio.com/api/v1/dataspaces/bar/ingest",
-        [{"Authorization", "Bearer foo"}],
-        "application/json", <<"{}">>},
-       Request
-      ),
+    %%    error_logger:tty(false),
+    application:load(lager),
+    application:set_env(lager, handlers, [HumioConfig]),
+    application:set_env(lager, error_logger_redirect, false),
 
     ok = meck:expect(
            httpc, request,
-           fun (post, MockedRequest, [], []) ->
-                   ?assertEqual(Request, MockedRequest),
+           fun (post, Request, [], []) ->
+                   assert_request(Request),
                    {ok, {{"HTTP/1.1", 200, "OK"}, [], <<>>}};
                (_, _, _, _) ->
                    ?assert(false),
                    error
            end
           ),
+    ?assertEqual(ok, lager:start()),
 
-    ?assertEqual(ok, lager_humio_backend:call_injest_api(Request, 3, 10, [])),
+    lager:info("Hello World!"),
 
+    ?assertEqual(ok, lager:set_loglevel(lager_humio_backend, debug)),
+    ?assertEqual(debug, lager:get_loglevel(lager_humio_backend)),
+    ?assertEqual({error,bad_loglevel}, lager:set_loglevel(lager_humio_backend, foobar)),
+
+    ok = application:stop(lager),
+    ok.
+
+assert_request({Url, Headers, ContentType, Payload}) ->
+    ?assertEqual("https://go.humio.com/api/v1/dataspaces/bar/ingest", Url),
+    ?assertEqual([{"Authorization","Bearer foo"}], Headers),
+    ?assertEqual("application/json", ContentType),
+
+    Decoded = jiffy:decode(Payload, [return_maps]),
+    ?assert(is_list(Decoded)),
+
+    [Event] = maps:get(<<"events">>, hd(Decoded)),
+    ?assert(maps:is_key(<<"rawstring">>, Event)),
+    ?assertEqual(
+       lists:sort([<<"function">>, <<"line">>, <<"module">>, <<"node">>, <<"pid">>]),
+       lists:sort(maps:keys(maps:get(<<"attributes">>, Event)))
+      ),
+    ?assertEqual(
+       lists:sort([<<"host">>, <<"level">>, <<"source">>]),
+       lists:sort(maps:keys(maps:get(<<"tags">>, hd(Decoded))))
+      ),
     ok.
 
 test_call_ingest_api_retry() ->
