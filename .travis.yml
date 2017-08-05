@@ -1,4 +1,7 @@
 language: erlang
+group: stable
+dist: precise
+os: linux
 notifications:
   email: martin@wiso.cz
 otp_release:
