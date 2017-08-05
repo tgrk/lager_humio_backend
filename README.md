@@ -1,4 +1,6 @@
 [![CircleCI](https://circleci.com/gh/tgrk/lager_humio_backend/tree/master.svg?style=svg)](https://circleci.com/gh/tgrk/lager_humio_backend/tree/master)
+[![Hex pm](http://img.shields.io/hexpm/v/erlpocket.svg?style=flat)](https://hex.pm/packages/lager_humio_backend)
+[![Downloads](https://img.shields.io/hexpm/dt/urilib.svg)](https://hex.pm/packages/lager_humio_backend)
 [![codecov.io](https://codecov.io/github/tgrk/lager_humio_backend/coverage.svg?branch=master)](https://codecov.io/github/tgrk/lager_humio_backend?branch=master)
 
 # lager_humio_backend
