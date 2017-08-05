@@ -38,7 +38,6 @@ test_integration() ->
                     {level, info}]
                   },
 
-    %%    error_logger:tty(false),
     application:load(lager),
     application:set_env(lager, handlers, [HumioConfig]),
     application:set_env(lager, error_logger_redirect, false),
@@ -74,6 +73,10 @@ assert_request({Url, Headers, ContentType, Payload}) ->
 
     [Event] = maps:get(<<"events">>, hd(Decoded)),
     ?assert(maps:is_key(<<"rawstring">>, Event)),
+    ?assertNotEqual(
+       nomatch,
+       binary:match(maps:get(<<"rawstring">>, Event), [<<"Hello World!">>])
+      ),
     ?assertEqual(
        lists:sort([<<"function">>, <<"line">>, <<"module">>, <<"node">>, <<"pid">>]),
        lists:sort(maps:keys(maps:get(<<"attributes">>, Event)))
