@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/tgrk/lager_humio_backend.svg?branch=master)](https://travis-ci.org/tgrk/lager_humio_backend)
+[![CircleCI](https://circleci.com/gh/tgrk/lager_humio_backend/tree/master.svg?style=svg)](https://circleci.com/gh/tgrk/lager_humio_backend/tree/master)
 [![codecov.io](https://codecov.io/github/tgrk/lager_humio_backend/coverage.svg?branch=master)](https://codecov.io/github/tgrk/lager_humio_backend?branch=master)
 
 # lager_humio_backend
