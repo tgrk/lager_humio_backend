@@ -8,7 +8,7 @@ ebin/*.beam
 rel/example_project
 .concrete/DEV_MODE
 .rebar
-logs
+log
 _build
 .idea
 rebar.lock
