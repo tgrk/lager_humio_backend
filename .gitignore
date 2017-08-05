@@ -11,5 +11,4 @@ rel/example_project
 log
 _build
 .idea
-rebar.lock
 rebar3.crashdump
