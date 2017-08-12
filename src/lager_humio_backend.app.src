@@ -1,12 +1,13 @@
 {application, lager_humio_backend,
  [{description, "Lager logging backend for Humio.com"},
-  {vsn, "1.0.1"},
+  {vsn, "1.0.2"},
   {registered, []},
   {applications,
    [kernel,
     stdlib,
     lager,
-    jiffy
+    jiffy,
+    iso8601
    ]},
   {env,[]},
   {modules, []},
