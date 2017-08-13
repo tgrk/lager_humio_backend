@@ -5,7 +5,8 @@
 %%% Configuration is a proplist with the following keys:
 %%% <ul>
 %%%    <li>`token' - Humio Ingestion API token (from Settings)</li>
-%%%    <li>`dataspce' - Humio dataspace (from Settings)</li>
+%%%    <li>`dataspace' - Humio dataspace (from Settings)</li>
+%%%    <li>`source' - Humio log source that feed into the dataspace</li>
 %%%    <li>`level' - log level to use</li>
 %%%    <li>`formatter' - the module to use when formatting log messages.
 %%%                      Defaults to `lager_default_formatter'</li>
@@ -39,6 +40,7 @@
 
 -record(state, { token           :: string()
                , dataspace       :: string()
+               , source          :: string()
                , level           :: integer()
                , formatter       :: atom()
                , format_config   :: list()
@@ -120,21 +122,21 @@ code_change(_OldVsn, State, _Extra) ->
 %%%============================================================================
 %%% Internal functionality
 %%%============================================================================
-create_payload(Message, #state{metadata_filter = MDFilter} = State) ->
+create_payload(Message, #state{source = Source, metadata_filter = MDFilter} = State) ->
     MD    = lager_msg:metadata(Message),
     Level = to_binary(lager_msg:severity(Message)),
     Ts    = lager_msg:timestamp(Message),
     Raw   = to_binary(create_raw_message(Message, State)),
     [
-     #{<<"tags">>    => create_tags(Level, MD)
+     #{<<"tags">>    => create_tags(Source, Level)
       , <<"events">> => [create_event(Ts, MD, MDFilter, Raw)]
       }
     ].
 
-create_tags(Level, MD) ->
+create_tags(Level, Source) ->
     #{ <<"host">>   => to_binary(get_hostname())
      , <<"level">>  => Level
-     , <<"source">> => to_binary(get_option(pid, MD, <<"unknown">>))
+     , <<"source">> => to_binary(Source)
      }.
 
 create_event(Ts, MD, MDFilter, RawMessage) ->
@@ -194,6 +196,10 @@ validate_options([{dataspace, ""} | _T]) ->
     {error, missing_dataspace};
 validate_options([{dataspace, DT} | T]) when is_list(DT) ->
     validate_options(T);
+validate_options([{source, ""} | _T]) ->
+    {error, missing_source};
+validate_options([{source, DT} | T]) when is_list(DT) ->
+    validate_options(T);
 validate_options([{retry_interval, N} | T]) when is_integer(N) ->
     validate_options(T);
 validate_options([{max_retries, N} | T]) when is_integer(N) ->
@@ -219,6 +225,7 @@ validate_options([H | _]) ->
 get_configuration(Options) ->
     #state{ token           = get_option(token, Options, "")
           , dataspace       = get_option(dataspace, Options, "")
+          , source          = get_option(source, Options, "unknown")
           , level           = lager_util:level_to_num(
                                 get_option(level, Options, debug))
           , formatter       = get_option(formatter, Options, lager_default_formatter)

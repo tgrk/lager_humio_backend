@@ -33,7 +33,8 @@ First you have to sign up with [Humio][1] service to get all required informatio
 | Option             | Required | Description                                    |
 | ------------------ |:--------:| ---------------------------------------------- |
 | `token`            | Yes      | Humio Ingestion API token (from [Settings][2]) |
-| `dataspce`         | Yes      | Humio dataspace (from [Settings][2])           |
+| `dataspace`        | Yes      | Humio dataspace (from [Settings][2])           |
+| `source`           | Yes      | Humio log source that feed into the dataspace  |
 | `level`            | Yes      | Minimal log level to use (defaults to `debug`) |
 | `formatter`        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter') |
 | `formatter_config` | No       | The format configuration string (defaults to `time [ severity ] message`) |
@@ -49,6 +50,7 @@ Sample configuration:
     {lager_console_backend, debug},
     {lager_humio_backend,   [{token, "YOUR_INGESTION_API_TOKEN"},
                              {dataspace, "YOUR_DATASPACE"},
+                             {source,    "YOUR_APPLICATION"},
                              {level, info}
     ]}
   ]}

@@ -35,6 +35,7 @@ test_integration() ->
     HumioConfig = {lager_humio_backend,
                    [{token, "foo"},
                     {dataspace, "bar"},
+                    {source, "foobar"},
                     {level, info}]
                   },
 
@@ -112,6 +113,7 @@ test_call_ingest_api_retry() ->
 test_get_configuration() ->
     Options = [ {token, ""}
               , {dataspace, ""}
+              , {source, ""}
               , {level, debug}
               , {formatter, lager_default_formatter}
               , {format_config, []}
@@ -122,7 +124,7 @@ test_get_configuration() ->
               ],
 
     ?assertEqual(
-       {state, [], [], 128, lager_default_formatter, [], [], 60, 10, []},
+       {state, [], [], [], 128, lager_default_formatter, [], [], 60, 10, []},
        lager_humio_backend:get_configuration(Options)
       ).
 
@@ -144,6 +146,7 @@ test_validate_options() ->
     Invalid = [
                 {{token, ""},           {error, missing_token}}
               , {{dataspace, ""},       {error, missing_dataspace}}
+              , {{source, ""},          {error, missing_source}}
               , {{level, unknown},      {error, {bad_level, unknown}}}
               , {{retry_interval, foo}, {error, {bad_config, {retry_interval, foo}}}}
               , {{max_retries, bar},    {error, {bad_config, {max_retries, bar}}}}
@@ -159,20 +162,13 @@ test_validate_options() ->
     ok.
 
 test_create_tags() ->
-    MD = [{pid, "<0.3774.0>"},
-          {line, 119},
-          {file, "lager_handler_watcher.erl"},
-          {module, lager_handler_watcher}
-         ],
-
-    Map = lager_humio_backend:create_tags(info, MD),
-
+    Map = lager_humio_backend:create_tags(info, "myapp"),
     ?assertEqual(
        to_binary(lager_humio_backend:get_hostname()),
        maps:get(<<"host">>, Map)
       ),
     ?assertEqual(info, maps:get(<<"level">>, Map)),
-    ?assert(is_pid(to_pid(maps:get(<<"source">>, Map)))),
+    ?assertEqual(<<"myapp">>, maps:get(<<"source">>, Map)),
 
     ok.
 
