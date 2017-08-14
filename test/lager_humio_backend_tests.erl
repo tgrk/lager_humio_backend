@@ -162,12 +162,12 @@ test_validate_options() ->
     ok.
 
 test_create_tags() ->
-    Map = lager_humio_backend:create_tags(info, "myapp"),
+    Map = lager_humio_backend:create_tags("myapp", info),
     ?assertEqual(
        to_binary(lager_humio_backend:get_hostname()),
        maps:get(<<"host">>, Map)
       ),
-    ?assertEqual(info, maps:get(<<"level">>, Map)),
+    ?assertEqual(<<"info">>, maps:get(<<"level">>, Map)),
     ?assertEqual(<<"myapp">>, maps:get(<<"source">>, Map)),
 
     ok.
