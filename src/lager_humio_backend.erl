@@ -54,7 +54,7 @@
 
 %% Exported for testing
 -ifdef(TEST).
--export([ call_injest_api/4
+-export([ call_ingest_api/4
         , create_httpc_request/3
         , get_configuration/1
         , validate_options/1
@@ -98,7 +98,7 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
             Opts = State#state.httpc_opts,
 
             spawn(fun () ->
-                          call_injest_api(Request, MaxRetries, RetryInterval, Opts)
+                          call_ingest_api(Request, MaxRetries, RetryInterval, Opts)
                   end),
             {ok, State};
         false ->
@@ -133,9 +133,9 @@ create_payload(Message, #state{source = Source, metadata_filter = MDFilter} = St
       }
     ].
 
-create_tags(Level, Source) ->
+create_tags(Source, Level) ->
     #{ <<"host">>   => to_binary(get_hostname())
-     , <<"level">>  => Level
+     , <<"level">>  => to_binary(Level)
      , <<"source">> => to_binary(Source)
      }.
 
@@ -160,15 +160,15 @@ create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) -
 format_timestamp(Ts) ->
     iso8601:format(Ts).
 
-call_injest_api(_Request, 0, _, _Opts) ->
+call_ingest_api(_Request, 0, _, _Opts) ->
     ok;
-call_injest_api(Request, Retries, Interval, Opts) ->
+call_ingest_api(Request, Retries, Interval, Opts) ->
     case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} ->
             ok;
         _Other ->
             timer:sleep(Interval * 1000),
-            call_injest_api(Request, Retries - 1, Interval, Opts)
+            call_ingest_api(Request, Retries - 1, Interval, Opts)
     end.
 
 create_httpc_request(Payload, Token, DS) ->

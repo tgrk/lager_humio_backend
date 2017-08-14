@@ -103,10 +103,10 @@ test_call_ingest_api_retry() ->
           ),
 
     %% tests case when we hit maximum number of retries
-    ?assertEqual(ok, lager_humio_backend:call_injest_api(Request, 0, 10, [])),
+    ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 0, 10, [])),
 
     %% tests case when we hit maximum number of retries
-    ?assertEqual(ok, lager_humio_backend:call_injest_api(Request, 3, 1, [])),
+    ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 3, 1, [])),
 
     ok.
 
