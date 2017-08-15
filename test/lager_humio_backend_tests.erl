@@ -13,7 +13,7 @@
 
 %% =============================================================================
 lager_humio_backend_test_() ->
-    {setup,
+    {foreach,
      fun() ->
              mock_httpc()
      end,
@@ -62,6 +62,7 @@ test_integration() ->
     ?assertEqual({error,bad_loglevel}, lager:set_loglevel(lager_humio_backend, foobar)),
 
     ok = application:stop(lager),
+    ?assert(meck:validate(httpc)),
     ok.
 
 assert_request({Url, Headers, ContentType, Payload}) ->
@@ -107,7 +108,7 @@ test_call_ingest_api_retry() ->
 
     %% tests case when we hit maximum number of retries
     ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 3, 1, [])),
-
+    ?assert(meck:validate(httpc)),
     ok.
 
 test_get_configuration() ->
