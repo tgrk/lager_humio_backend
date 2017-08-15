@@ -103,7 +103,7 @@ test_call_ingest_api_retry() ->
           ),
 
     %% tests case when we hit maximum number of retries
-    ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 0, 10, [])),
+    ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 0, 1, [])),
 
     %% tests case when we hit maximum number of retries
     ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 3, 1, [])),
@@ -124,7 +124,7 @@ test_get_configuration() ->
               ],
 
     ?assertEqual(
-       {state, [], [], [], 128, lager_default_formatter, [], [], 60, 10, []},
+       {state, [], [], [], 128, lager_default_formatter, [], [], 60*1000, 10, []},
        lager_humio_backend:get_configuration(Options)
       ).
 
