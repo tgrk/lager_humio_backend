@@ -59,7 +59,6 @@
         , get_configuration/1
         , validate_options/1
         , create_event/4
-        , create_tags/2
         , get_hostname/0
         , to_binary/1
         ]).
@@ -123,21 +122,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functionality
 %%%============================================================================
 create_payload(Message, #state{source = Source, metadata_filter = MDFilter} = State) ->
-    MD    = lager_msg:metadata(Message),
+    MD0   = lager_msg:metadata(Message),
+    MD    = [{<<"source">>,Source}, {<<"host">>, to_binary(get_hostname())} | MD0],
     Level = to_binary(lager_msg:severity(Message)),
     Ts    = lager_msg:timestamp(Message),
     Raw   = to_binary(create_raw_message(Message, State)),
     [
-     #{<<"tags">>    => create_tags(Source, Level)
+     #{ <<"tags">>   => #{ <<"level">>  => to_binary(Level)}
       , <<"events">> => [create_event(Ts, MD, MDFilter, Raw)]
       }
     ].
-
-create_tags(Source, Level) ->
-    #{ <<"host">>   => to_binary(get_hostname())
-     , <<"level">>  => to_binary(Level)
-     , <<"source">> => to_binary(Source)
-     }.
 
 create_event(Ts, MD, MDFilter, RawMessage) ->
     #{ <<"timestamp">>  => format_timestamp(Ts)
