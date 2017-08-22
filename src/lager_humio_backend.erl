@@ -167,7 +167,7 @@ call_ingest_api(Request, Retries, Interval, Opts) ->
         {ok, {{_, 200, _}, _H, _B}} ->
             ok;
         _Other ->
-            timer:sleep(Interval * 1000),
+            timer:sleep(Interval),
             call_ingest_api(Request, Retries - 1, Interval, Opts)
     end.
 
@@ -231,7 +231,7 @@ get_configuration(Options) ->
           , formatter       = get_option(formatter, Options, lager_default_formatter)
           , format_config   = get_option(format_config, Options, [])
           , metadata_filter = get_option(metadata_filter, Options, [])
-          , retry_interval  = get_option(retry_interval, Options, 60)
+          , retry_interval  = get_option(retry_interval, Options, 60) * 1000
           , max_retries     = get_option(max_retries, Options, 10)
           , httpc_opts      = get_option(httpc_opts, Options, [])
           }.
