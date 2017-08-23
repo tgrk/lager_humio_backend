@@ -13,7 +13,7 @@
 
 %% =============================================================================
 lager_humio_backend_test_() ->
-    {setup,
+    {foreach,
      fun() ->
              mock_httpc()
      end,
@@ -25,7 +25,6 @@ lager_humio_backend_test_() ->
      , {"Call Ingest API retry",          fun test_call_ingest_api_retry/0}
      , {"Loading of init/config options", fun test_get_configuration/0}
      , {"Validate init/config options",   fun test_validate_options/0}
-     , {"Create payload - tags",          fun test_create_tags/0}
      , {"Create payload - event",         fun test_create_event/0}
      ]
     }.
@@ -62,6 +61,7 @@ test_integration() ->
     ?assertEqual({error,bad_loglevel}, lager:set_loglevel(lager_humio_backend, foobar)),
 
     ok = application:stop(lager),
+    ?assert(meck:validate(httpc)),
     ok.
 
 assert_request({Url, Headers, ContentType, Payload}) ->
@@ -79,11 +79,11 @@ assert_request({Url, Headers, ContentType, Payload}) ->
        binary:match(maps:get(<<"rawstring">>, Event), [<<"Hello World!">>])
       ),
     ?assertEqual(
-       lists:sort([<<"function">>, <<"line">>, <<"module">>, <<"node">>, <<"pid">>]),
+       lists:sort([<<"function">>, <<"line">>, <<"module">>, <<"node">>, <<"pid">>,<<"source">>,<<"host">>]),
        lists:sort(maps:keys(maps:get(<<"attributes">>, Event)))
       ),
     ?assertEqual(
-       lists:sort([<<"host">>, <<"level">>, <<"source">>]),
+       lists:sort([<<"level">>]),
        lists:sort(maps:keys(maps:get(<<"tags">>, hd(Decoded))))
       ),
     ok.
@@ -107,7 +107,7 @@ test_call_ingest_api_retry() ->
 
     %% tests case when we hit maximum number of retries
     ?assertEqual(ok, lager_humio_backend:call_ingest_api(Request, 3, 1, [])),
-
+    ?assert(meck:validate(httpc)),
     ok.
 
 test_get_configuration() ->
@@ -159,17 +159,6 @@ test_validate_options() ->
                  lager_humio_backend:validate_options([Option])
                 )
       end, Invalid),
-    ok.
-
-test_create_tags() ->
-    Map = lager_humio_backend:create_tags("myapp", info),
-    ?assertEqual(
-       to_binary(lager_humio_backend:get_hostname()),
-       maps:get(<<"host">>, Map)
-      ),
-    ?assertEqual(<<"info">>, maps:get(<<"level">>, Map)),
-    ?assertEqual(<<"myapp">>, maps:get(<<"source">>, Map)),
-
     ok.
 
 test_create_event() ->
