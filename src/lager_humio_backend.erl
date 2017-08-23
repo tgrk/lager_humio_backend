@@ -6,7 +6,7 @@
 %%% <ul>
 %%%    <li>`token' - Humio Ingestion API token (from Settings)</li>
 %%%    <li>`dataspace' - Humio dataspace (from Settings)</li>
-%%%    <li>`source' - Humio log source that feed into the dataspace</li>
+%%%    <li>`source' - Humio log source for log grouping and filtering</li>
 %%%    <li>`level' - log level to use</li>
 %%%    <li>`formatter' - the module to use when formatting log messages.
 %%%                      Defaults to `lager_default_formatter'</li>
@@ -123,7 +123,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%============================================================================
 create_payload(Message, #state{source = Source, metadata_filter = MDFilter} = State) ->
     MD0   = lager_msg:metadata(Message),
-    MD    = [{<<"source">>,Source}, {<<"host">>, to_binary(get_hostname())} | MD0],
+    MD    = [{<<"source">>, Source}, {<<"host">>, to_binary(get_hostname())} | MD0],
     Level = to_binary(lager_msg:severity(Message)),
     Ts    = lager_msg:timestamp(Message),
     Raw   = to_binary(create_raw_message(Message, State)),

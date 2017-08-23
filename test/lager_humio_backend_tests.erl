@@ -191,9 +191,3 @@ mock_httpc() ->
 unmock_httpc() ->
     ?assertEqual(ok, meck:unload(httpc)),
     ok.
-
-to_binary(Value) when is_list(Value) ->
-    list_to_binary(Value).
-
-to_pid(Value) when is_binary(Value) ->
-    list_to_pid(binary_to_list(Value)).

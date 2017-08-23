@@ -34,7 +34,7 @@ First you have to sign up with [Humio][1] service to get all required informatio
 | ------------------ |:--------:| ---------------------------------------------- |
 | `token`            | Yes      | Humio Ingestion API token (from [Settings][2]) |
 | `dataspace`        | Yes      | Humio dataspace (from [Settings][2])           |
-| `source`           | Yes      | Humio log source that feed into the dataspace  |
+| `source`           | Yes      | Humio log source for log grouping and filtering  |
 | `level`            | Yes      | Minimal log level to use (defaults to `debug`) |
 | `formatter`        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter') |
 | `formatter_config` | No       | The format configuration string (defaults to `time [ severity ] message`) |
@@ -57,6 +57,10 @@ Sample configuration:
 }
 
 ```
+
+## Contributors
+* Peter Mechlenborg - https://github.com/pmech
+
 
 [1]: https://go.humio.com/docs/first-time-use/index.html
 [2]: https://go.humio.com/docs/ingest-tokens/index.html
