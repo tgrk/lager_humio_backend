@@ -32,7 +32,8 @@ lager_humio_backend_test_() ->
 %% =============================================================================
 test_integration() ->
     HumioConfig = {lager_humio_backend,
-                   [{token, "foo"},
+                   [{host, "testhost"},
+                    {token, "foo"},
                     {dataspace, "bar"},
                     {source, "foobar"},
                     {level, info}]
@@ -65,7 +66,7 @@ test_integration() ->
     ok.
 
 assert_request({Url, Headers, ContentType, Payload}) ->
-    ?assertEqual("https://go.humio.com/api/v1/dataspaces/bar/ingest", Url),
+    ?assertEqual("https://testhost/api/v1/dataspaces/bar/ingest", Url),
     ?assertEqual([{"Authorization","Bearer foo"}], Headers),
     ?assertEqual("application/json", ContentType),
 
@@ -89,7 +90,7 @@ assert_request({Url, Headers, ContentType, Payload}) ->
     ok.
 
 test_call_ingest_api_retry() ->
-    Request = lager_humio_backend:create_httpc_request(<<"{}">>, "foo", "bar"),
+    Request = lager_humio_backend:create_httpc_request(<<"{}">>, "foo", "bar", "baz"),
 
     ok = meck:expect(
            httpc, request,
@@ -111,7 +112,8 @@ test_call_ingest_api_retry() ->
     ok.
 
 test_get_configuration() ->
-    Options = [ {token, ""}
+    Options = [ {host, ""}
+              , {token, ""}
               , {dataspace, ""}
               , {source, ""}
               , {level, debug}
@@ -124,12 +126,13 @@ test_get_configuration() ->
               ],
 
     ?assertEqual(
-       {state, [], [], [], 128, lager_default_formatter, [], [], 60*1000, 10, []},
+       {state, [], [], [], [], 128, lager_default_formatter, [], [], 60*1000, 10, []},
        lager_humio_backend:get_configuration(Options)
       ).
 
 test_validate_options() ->
-    ValidOptions = [ {token, "foo"}
+    ValidOptions = [ {host, "test.com"}
+                   , {token, "foo"}
                    , {dataspace, "bar"}
                    , {level, debug}
                    , {formatter, lager_default_formatter}
@@ -143,8 +146,8 @@ test_validate_options() ->
     ?assertEqual(ok, lager_humio_backend:validate_options(ValidOptions)),
     ?assertEqual(ok, lager_humio_backend:validate_options([])),
 
-    Invalid = [
-                {{token, ""},           {error, missing_token}}
+    Invalid = [ {{host, ""},            {error, missing_host}}
+              , {{token, ""},           {error, missing_token}}
               , {{dataspace, ""},       {error, missing_dataspace}}
               , {{source, ""},          {error, missing_source}}
               , {{level, unknown},      {error, {bad_level, unknown}}}

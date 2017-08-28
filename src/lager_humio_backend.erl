@@ -4,6 +4,7 @@
 %%% Lager backend for Humio.com logging service
 %%% Configuration is a proplist with the following keys:
 %%% <ul>
+%%%    <li>`host' - Hostname of the Humio server (e.g. go.humio.com)</li>
 %%%    <li>`token' - Humio Ingestion API token (from Settings)</li>
 %%%    <li>`dataspace' - Humio dataspace (from Settings)</li>
 %%%    <li>`source' - Humio log source for log grouping and filtering</li>
@@ -36,9 +37,8 @@
         , code_change/3
         ]).
 
--define(BASE_API_URI, "https://go.humio.com/api/v1/dataspaces").
-
--record(state, { token           :: string()
+-record(state, { host            :: string()
+               , token           :: string()
                , dataspace       :: string()
                , source          :: string()
                , level           :: integer()
@@ -55,7 +55,7 @@
 %% Exported for testing
 -ifdef(TEST).
 -export([ call_ingest_api/4
-        , create_httpc_request/3
+        , create_httpc_request/4
         , get_configuration/1
         , validate_options/1
         , create_event/4
@@ -91,7 +91,7 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message, State)),
-            Request = create_httpc_request(Payload, State#state.token, State#state.dataspace),
+            Request = create_httpc_request(Payload, State#state.host, State#state.token, State#state.dataspace),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
@@ -165,11 +165,11 @@ call_ingest_api(Request, Retries, Interval, Opts) ->
             call_ingest_api(Request, Retries - 1, Interval, Opts)
     end.
 
-create_httpc_request(Payload, Token, DS) ->
-    {get_uri(DS), get_headers(Token), "application/json", Payload}.
+create_httpc_request(Payload, Host, Token, DS) ->
+    {get_uri(Host, DS), get_headers(Token), "application/json", Payload}.
 
-get_uri(DS) ->
-    ?BASE_API_URI ++ "/" ++ DS ++ "/ingest".
+get_uri(Host, DS) ->
+    "https://"++Host++"/api/v1/dataspaces"++ "/" ++ DS ++ "/ingest".
 
 get_headers(Token) ->
     [{"Authorization", "Bearer " ++ Token}].
@@ -182,6 +182,10 @@ is_valid_log_level(Level) ->
     lists:member(Level, ?LEVELS).
 
 validate_options([]) -> ok;
+validate_options([{host, ""} | _T]) ->
+    {error, missing_host};
+validate_options([{host, Host} | T]) when is_list(Host) ->
+    validate_options(T);
 validate_options([{token, ""} | _T]) ->
     {error, missing_token};
 validate_options([{token, Token} | T]) when is_list(Token) ->
@@ -217,7 +221,8 @@ validate_options([H | _]) ->
     {error, {bad_config, H}}.
 
 get_configuration(Options) ->
-    #state{ token           = get_option(token, Options, "")
+    #state{ host            = get_option(host, Options, "")
+          , token           = get_option(token, Options, "")
           , dataspace       = get_option(dataspace, Options, "")
           , source          = get_option(source, Options, "unknown")
           , level           = lager_util:level_to_num(
