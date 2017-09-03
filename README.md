@@ -32,6 +32,7 @@ First you have to sign up with [Humio][1] service to get all required informatio
 
 | Option             | Required | Description                                    |
 | ------------------ |:--------:| ---------------------------------------------- |
+| `host`             | Yes      | Hostname of the Humio server (e.g. go.humio.com) |
 | `token`            | Yes      | Humio Ingestion API token (from [Settings][2]) |
 | `dataspace`        | Yes      | Humio dataspace (from [Settings][2])           |
 | `source`           | Yes      | Humio log source for log grouping and filtering  |
@@ -48,7 +49,8 @@ Sample configuration:
 {lager, [
   {handlers, [
     {lager_console_backend, debug},
-    {lager_humio_backend,   [{token, "YOUR_INGESTION_API_TOKEN"},
+    {lager_humio_backend,   [{host, "go.humio.com"},
+                             {token, "YOUR_INGESTION_API_TOKEN"},
                              {dataspace, "YOUR_DATASPACE"},
                              {source,    "YOUR_APPLICATION"},
                              {level, info}

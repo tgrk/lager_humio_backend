@@ -91,7 +91,8 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message, State)),
-            Request = create_httpc_request(Payload, State#state.host, State#state.token, State#state.dataspace),
+            Request = create_httpc_request(Payload, State#state.host,
+                                           State#state.token, State#state.dataspace),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
@@ -169,7 +170,7 @@ create_httpc_request(Payload, Host, Token, DS) ->
     {get_uri(Host, DS), get_headers(Token), "application/json", Payload}.
 
 get_uri(Host, DS) ->
-    "https://"++Host++"/api/v1/dataspaces"++ "/" ++ DS ++ "/ingest".
+    "https://" ++ Host ++ "/api/v1/dataspaces/" ++ DS ++ "/ingest".
 
 get_headers(Token) ->
     [{"Authorization", "Bearer " ++ Token}].
@@ -221,7 +222,7 @@ validate_options([H | _]) ->
     {error, {bad_config, H}}.
 
 get_configuration(Options) ->
-    #state{ host            = get_option(host, Options, "")
+    #state{ host            = get_option(host, Options, "go.humio.com")
           , token           = get_option(token, Options, "")
           , dataspace       = get_option(dataspace, Options, "")
           , source          = get_option(source, Options, "unknown")
