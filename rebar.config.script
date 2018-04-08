@@ -6,15 +6,15 @@ case erlang:function_exported(rebar3, main, 1) of
         %% rebar 2.x or older
         NewConf = lists:keystore(deps_dir, 1, CONFIG, {deps_dir, "deps"}),
         Deps = [{lager, ".*",
-                 {git, "https://github.com/erlang-lager/lager.git", {tag, "3.2.4"}}},
+                 {git, "https://github.com/erlang-lager/lager.git", {tag, "3.6.1"}}},
                 {jiffy, "0.*",
-                 {git, "https://github.com/davisp/jiffy.git", {tag, "0.14.7"}}},
+                 {git, "https://github.com/davisp/jiffy.git", {tag, "0.15.1"}}},
                 {iso8601, ".*",
                   {git, "https://github.com/erlsci/iso8601.git", {tag, "1.2.3"}}},
                 {meck, ".*",
-                 {git, "https://github.com/eproxus/meck.git", {tag, "0.8.7"}}},
+                 {git, "https://github.com/eproxus/meck.git", {tag, "0.8.9"}}},
                 {eunit_formatters, ".*",
-                 {git, "https://github.com/seancribbs/eunit_formatters.git", {tag, "v0.3.1"}}}
+                 {git, "https://github.com/seancribbs/eunit_formatters.git", {tag, "v0.5.0"}}}
                ],
         lists:keystore(deps, 1, NewConf, {deps, Deps})
 end.
