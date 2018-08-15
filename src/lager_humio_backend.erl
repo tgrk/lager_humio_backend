@@ -129,19 +129,22 @@ create_payload(Message, #state{source = Source, metadata_filter = MDFilter} = St
     Ts    = lager_msg:timestamp(Message),
     Raw   = to_binary(create_raw_message(Message, State)),
     [
-     #{ <<"tags">>   => #{ <<"level">>  => to_binary(Level)}
+     #{ <<"tags">>   => #{<<"level">>  => to_binary(Level)}
       , <<"events">> => [create_event(Ts, MD, MDFilter, Raw)]
       }
     ].
 
+create_event(Ts, MD, MDFilter, Message) when is_map(Message) ->
+    #{ <<"timestamp">>  => format_timestamp(Ts)
+     , <<"attributes">> => create_attributes(MD, MDFilter, Message)};
 create_event(Ts, MD, MDFilter, RawMessage) ->
     #{ <<"timestamp">>  => format_timestamp(Ts)
-     , <<"attributes">> => create_attributes(MD, MDFilter)
+     , <<"attributes">> => create_attributes(MD, MDFilter, #{})
      , <<"rawstring">>  => RawMessage
      }.
 
-create_attributes(MD, Excluded) ->
-    maps:without(Excluded, convert_attributes(MD, #{})).
+create_attributes(MD, Excluded, Event) ->
+    maps:without(Excluded, convert_attributes(MD, Event)).
 
 convert_attributes([], Acc) ->
     Acc;

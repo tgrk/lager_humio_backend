@@ -25,7 +25,8 @@ lager_humio_backend_test_() ->
      , {"Call Ingest API retry",          fun test_call_ingest_api_retry/0}
      , {"Loading of init/config options", fun test_get_configuration/0}
      , {"Validate init/config options",   fun test_validate_options/0}
-     , {"Create payload - event",         fun test_create_event/0}
+     , {"Create payload - text event",    fun test_create_text_event/0}
+     , {"Create payload - JSON event",    fun test_create_json_event/0}
      ]
     }.
 
@@ -164,24 +165,46 @@ test_validate_options() ->
       end, Invalid),
     ok.
 
-test_create_event() ->
-    MD = [{pid, "<0.3774.0>"},
-          {line, 119},
-          {file, "lager_handler_watcher.erl"},
-          {module, lager_handler_watcher}
+test_create_text_event() ->
+    MD = [
+            {pid, "<0.3774.0>"},
+            {line, 119},
+            {file, "lager_handler_watcher.erl"},
+            {module, lager_handler_watcher}
          ],
     MDFilter = [line, file],
     Ts = {1501,189140,422258},
 
     ?assertEqual(
-       #{<<"attributes">> =>
-             #{module => <<"lager_handler_watcher">>,
-               pid => <<"<0.3774.0>">>
-              },
+       #{<<"attributes">> => #{
+                module => <<"lager_handler_watcher">>,
+                pid    => <<"<0.3774.0>">>
+            },
          <<"rawstring">> => <<"raw">>,
          <<"timestamp">> => <<"2017-07-27T20:59:00Z">>},
        lager_humio_backend:create_event(Ts, MD, MDFilter, <<"raw">>)
-      ).
+    ).
+
+test_create_json_event() ->
+    MD = [
+            {pid, "<0.3774.0>"},
+            {line, 119},
+            {file, "lager_handler_watcher.erl"},
+            {module, lager_handler_watcher}
+        ],
+    MDFilter = [line, file],
+    Ts = {1501,189140,422258},
+    JSONEvent = #{<<"foo">> => <<"bar">>},
+
+    ?assertEqual(
+        #{<<"attributes">> => #{
+                module     => <<"lager_handler_watcher">>,
+                pid        => <<"<0.3774.0>">>,
+                <<"foo">> => <<"bar">>
+            },
+            <<"timestamp">> => <<"2017-07-27T20:59:00Z">>},
+        lager_humio_backend:create_event(Ts, MD, MDFilter, JSONEvent)
+    ).
 
 %%%============================================================================
 %%% Internal functionality
