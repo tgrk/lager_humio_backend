@@ -152,6 +152,12 @@ convert_attributes([{K, V} | T], Acc) ->
     Acc1 = maps:put(K, to_binary(V), Acc),
     convert_attributes(T, Acc1).
 
+create_raw_message(Msg, Config) when is_map(Msg) ->
+    RawMsg = case maps:get(<<"message">>, Msg, <<>>) of
+                <<>>    -> jiffy:encode(Msg);
+                Message -> Message
+            end,
+    create_raw_message(RawMsg, Config);
 create_raw_message(Msg, #state{formatter = Formatter, format_config = Config}) ->
     Formatter:format(Msg, Config).
 
