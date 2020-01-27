@@ -66,7 +66,7 @@ test_integration() ->
     ok.
 
 assert_request({Url, Headers, ContentType, Payload}) ->
-    ?assertEqual("https://testhost/api/v1/dataspaces/bar/ingest", Url),
+    ?assertEqual("https://testhost/api/v1/dataspaces/humio-structured", Url),
     ?assertEqual([{"Authorization","Bearer foo"}], Headers),
     ?assertEqual("application/json", ContentType),
 

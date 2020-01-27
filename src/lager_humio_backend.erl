@@ -66,6 +66,7 @@
 
 %% @private
 init(Options) ->
+		error_logger:info_msg("HUMIO: init.options=~p", [Options]),
     case validate_options(Options) of
         ok ->
             {ok, get_configuration(Options)};
@@ -161,6 +162,10 @@ call_ingest_api(Request, Retries, Interval, Opts) ->
     case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} ->
             ok;
+        {ok, {{_, 401, _}, _H, Response}} ->
+						error_logger:error_msg("HUMIO: ~s!~n", [Response]),
+            timer:sleep(Interval),
+            call_ingest_api(Request, Retries - 1, Interval, Opts);
         _Other ->
             timer:sleep(Interval),
             call_ingest_api(Request, Retries - 1, Interval, Opts)
@@ -169,8 +174,9 @@ call_ingest_api(Request, Retries, Interval, Opts) ->
 create_httpc_request(Payload, Host, Token, DS) ->
     {get_uri(Host, DS), get_headers(Token), "application/json", Payload}.
 
-get_uri(Host, DS) ->
-    "https://" ++ Host ++ "/api/v1/dataspaces/" ++ DS ++ "/ingest".
+get_uri(Host, _DS) ->
+   %"https://" ++ Host ++ "/api/v1/dataspaces/" ++ DS ++ "/ingest".
+		"https://" ++ Host ++ "/api/v1/ingest/humio-structured".
 
 get_headers(Token) ->
     [{"Authorization", "Bearer " ++ Token}].
@@ -222,7 +228,7 @@ validate_options([H | _]) ->
     {error, {bad_config, H}}.
 
 get_configuration(Options) ->
-    #state{ host            = get_option(host, Options, "go.humio.com")
+    #state{ host            = get_option(host, Options, "cloud.humio.com")
           , token           = get_option(token, Options, "")
           , dataspace       = get_option(dataspace, Options, "")
           , source          = get_option(source, Options, "unknown")
