@@ -34,7 +34,6 @@ First you have to sign up with [Humio][1] service to get all required informatio
 | ------------------ |:--------:| ---------------------------------------------- |
 | `host`             | Yes      | Hostname of the Humio server (e.g. go.humio.com) |
 | `token`            | Yes      | Humio Ingestion API token (from [Settings][2]) |
-| `dataspace`        | Yes      | Humio dataspace (from [Settings][2])           |
 | `source`           | Yes      | Humio log source for log grouping and filtering  |
 | `level`            | Yes      | Minimal log level to use (defaults to `debug`) |
 | `formatter`        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter`)  |
@@ -49,11 +48,10 @@ Sample configuration:
 {lager, [
   {handlers, [
     {lager_console_backend, debug},
-    {lager_humio_backend,   [{host, "go.humio.com"},
-                             {token, "YOUR_INGESTION_API_TOKEN"},
-                             {dataspace, "YOUR_DATASPACE"},
-                             {source,    "YOUR_APPLICATION"},
-                             {level, info}
+    {lager_humio_backend,   [{host,  "cloud.humio.com"},
+                             {token,  "YOUR_INGESTION_API_TOKEN"},
+                             {source, "YOUR_APPLICATION"},
+                             {level,  info}
     ]}
   ]}
 }
