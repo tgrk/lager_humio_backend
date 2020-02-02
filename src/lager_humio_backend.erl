@@ -6,7 +6,6 @@
 %%% <ul>
 %%%    <li>`host' - Hostname of the Humio server (e.g. go.humio.com)</li>
 %%%    <li>`token' - Humio Ingestion API token (from Settings)</li>
-%%%    <li>`dataspace' - Humio dataspace (from Settings)</li>
 %%%    <li>`source' - Humio log source for log grouping and filtering</li>
 %%%    <li>`level' - log level to use</li>
 %%%    <li>`formatter' - the module to use when formatting log messages.
@@ -39,7 +38,6 @@
 
 -record(state, { host            :: string()
                , token           :: string()
-               , dataspace       :: string()
                , source          :: string()
                , level           :: integer()
                , formatter       :: atom()
@@ -55,7 +53,7 @@
 %% Exported for testing
 -ifdef(TEST).
 -export([ call_ingest_api/4
-        , create_httpc_request/4
+        , create_httpc_request/3
         , get_configuration/1
         , validate_options/1
         , create_event/4
@@ -91,8 +89,7 @@ handle_event({log, Message}, #state{level = MinLevel} = State) ->
     case lager_util:is_loggable(Message, MinLevel, ?MODULE) of
         true ->
             Payload = jiffy:encode(create_payload(Message, State)),
-            Request = create_httpc_request(Payload, State#state.host,
-                                           State#state.token, State#state.dataspace),
+            Request = create_httpc_request(Payload, State#state.host, State#state.token),
             RetryInterval = State#state.retry_interval,
             MaxRetries = State#state.max_retries,
             Opts = State#state.httpc_opts,
@@ -161,16 +158,20 @@ call_ingest_api(Request, Retries, Interval, Opts) ->
     case httpc:request(post, Request, Opts, []) of
         {ok, {{_, 200, _}, _H, _B}} ->
             ok;
+        {ok, {{_, 401, _}, _H, Response}} ->
+						error_logger:error_msg("HUMIO: ~s!~n", [Response]),
+            timer:sleep(Interval),
+            call_ingest_api(Request, Retries - 1, Interval, Opts);
         _Other ->
             timer:sleep(Interval),
             call_ingest_api(Request, Retries - 1, Interval, Opts)
     end.
 
-create_httpc_request(Payload, Host, Token, DS) ->
-    {get_uri(Host, DS), get_headers(Token), "application/json", Payload}.
+create_httpc_request(Payload, Host, Token) ->
+    {get_uri(Host), get_headers(Token), "application/json", Payload}.
 
-get_uri(Host, DS) ->
-    "https://" ++ Host ++ "/api/v1/dataspaces/" ++ DS ++ "/ingest".
+get_uri(Host) ->
+		"https://" ++ Host ++ "/api/v1/ingest/humio-structured".
 
 get_headers(Token) ->
     [{"Authorization", "Bearer " ++ Token}].
@@ -222,9 +223,8 @@ validate_options([H | _]) ->
     {error, {bad_config, H}}.
 
 get_configuration(Options) ->
-    #state{ host            = get_option(host, Options, "go.humio.com")
+    #state{ host            = get_option(host, Options, "cloud.humio.com")
           , token           = get_option(token, Options, "")
-          , dataspace       = get_option(dataspace, Options, "")
           , source          = get_option(source, Options, "unknown")
           , level           = lager_util:level_to_num(
                                 get_option(level, Options, debug))

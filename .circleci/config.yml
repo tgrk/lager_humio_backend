@@ -26,15 +26,15 @@ jobs:
           name: Display webapp coverage report
           command: rebar3 cover -v
       - run:
-          name: Convert coverage report to codecov supported format
-          command:  bin/covertool -cover _build/test/cover/eunit.coverdata -appname lager_humio_backend -output cobertura.xml
+          name: Generate coverage report to codecov supported format
+          command:  rebar3 covertool generate -p2
       - run:
           name: Upload coverage report to Codecov
           command: |
             python3 -m venv venv
             . venv/bin/activate
             pip3 install --upgrade codecov
-            codecov
+            codecov -f _build/test/covertool/lager_humio_backend.covertool.xml
       - save_cache:
           key: build-cache-{{ checksum "rebar.lock" }}
           paths:
