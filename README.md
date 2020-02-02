@@ -37,7 +37,7 @@ First you have to sign up with [Humio][1] service to get all required informatio
 | `dataspace`        | Yes      | Humio dataspace (from [Settings][2])           |
 | `source`           | Yes      | Humio log source for log grouping and filtering  |
 | `level`            | Yes      | Minimal log level to use (defaults to `debug`) |
-| `formatter`        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter') |
+| `formatter`        | No       | The module to use when formatting log messages (defaults to `lager_default_formatter`)  |
 | `formatter_config` | No       | The format configuration string (defaults to `time [ severity ] message`) |
 | `metadata_filter`  | No       | A list of excluded metadata keys |
 | `retry_interval`   | No       | Intervarl for retry in case endpoint is not available (defaults to 60 seconds) |
