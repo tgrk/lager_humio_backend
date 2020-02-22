@@ -58,6 +58,24 @@ Sample configuration:
 
 ```
 
+Sample elixir configuration:
+```elixir
+config :lager,
+  handlers: [
+    lager_console_backend: [
+      level: :debug
+    ],
+    lager_humio_backend: [
+      host: 'go.humio.com',
+      token: 'YOUR_INGESTION_API_TOKEN',
+      dataspace: 'YOUR_DATASPACE',
+      source: 'YOUR_APPLICATION',
+      level: :info
+    ]
+  ]
+```
+
+
 ## Contributors
 * Peter Mechlenborg - https://github.com/pmech
 
